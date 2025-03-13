@@ -1,12 +1,16 @@
 use std::{
 
+
     collections::LinkedList,
     fmt::{self, format},
 };
 
+
+
 #[derive(Debug)]
 pub enum Token {
     Identifier,
+    Number,
 
     Plus,
     Minus,
@@ -34,7 +38,9 @@ pub enum Token {
     LeftCaret,
     RightCaret,
 
-    DoubleColon, // :: import statements, scope resolution?
+    Semicolon, 
+
+    ColonColon, // :: import statements, scope resolution?
 }
 
 pub struct Lexeme {
@@ -67,7 +73,7 @@ fn is_letter(c: u8) -> bool {
 }
 
 fn is_number(c: u8) -> bool {
-    matches!(c, b'1'..=b'9')
+    return c.is_ascii_digit();
 }
 
 fn is_start_of_identifier(c: u8) -> bool {
@@ -92,6 +98,7 @@ fn is_operator(c: u8) -> bool {
             | b')'
             | b'+'
             | b'-'
+            | b'='
             | b'*'
             | b'/'
             | b'&'
@@ -101,6 +108,7 @@ fn is_operator(c: u8) -> bool {
             | b'>'
             | b'^'
             | b':' 
+            | b';'
     )
 }
 
@@ -126,7 +134,8 @@ fn string_to_operator(str: &String) -> Option<Token> {
         "]" => Some(Token::RightBrace),
         "<" => Some(Token::LeftCaret),
         ">" => Some(Token::RightCaret),
-        "::" => Some(Token::DoubleColon),
+        ";" => Some(Token::Semicolon),
+        "::" => Some(Token::ColonColon),
         _ => None,
     }
 }
@@ -156,7 +165,11 @@ pub fn process(bytes: &Vec<u8>) -> Result<Vec<Lexeme>, String> {
                 } else if is_operator(*byte) {
                     states.push_back(LexerState::Operator);
                     value.push(*byte as char);
-                } else if *byte == b'\0' {
+                } else if is_number(*byte) {
+                    states.push_back(LexerState::Number);
+                    value.push(*byte as char);
+                }                
+                else if *byte == b'\0' {
                     break;
                 } else {
                     return Err(format!(
@@ -191,8 +204,9 @@ pub fn process(bytes: &Vec<u8>) -> Result<Vec<Lexeme>, String> {
                         value: Some(value.clone()),
                     });
                     value.clear();
+                    states.push_back(LexerState::Operator);
                     value.push(*byte as char);
-                }
+                } 
                 else {
                     return Err(format!(
                         "Unexpected token on line {}: '{}'",
@@ -222,6 +236,26 @@ pub fn process(bytes: &Vec<u8>) -> Result<Vec<Lexeme>, String> {
                         ));
                     }
                 } 
+                else if is_operator(*byte) {
+                    let mut temp = value.clone();
+                    temp.push(*byte as char);
+
+                    if string_to_operator(&temp).is_some() {
+                        value.push(*byte as char);
+                    } else {
+                        if let Some(op) = string_to_operator(&value) {
+                            states.pop_back();
+                            lexemes.push(Lexeme {
+                                line_number,
+                                token: op,
+                                value: Some(value.clone()),
+                            });
+                            value.clear();
+                        }
+                        states.push_back(LexerState::Operator);
+                        value.push(*byte as char); 
+                    }
+                }
                 else if is_start_of_identifier(*byte) {
                     // todo: move to function?
                     if let Some(op) = string_to_operator(&value) {
@@ -237,6 +271,38 @@ pub fn process(bytes: &Vec<u8>) -> Result<Vec<Lexeme>, String> {
                 }
                 else {
                     value.push(*byte as char);
+                }
+            }
+            LexerState::Number => {
+                if is_whitespace(*byte) || *byte == b'\n' || *byte == b'\0' {
+                    states.pop_back();
+                    lexemes.push(Lexeme {
+                        line_number,
+                        token: Token::Number,
+                        value: Some(value.clone()),
+                    });
+                    value.clear();
+
+                    if *byte == b'\n' {
+                        line_number += 1;
+                    } 
+                }
+                else if is_operator(*byte) {
+                    states.pop_back();
+                    lexemes.push(Lexeme {
+                        line_number,
+                        token: Token::Number,
+                        value: Some(value.clone()),
+                    });
+                    value.clear(); 
+                    states.push_back(LexerState::Operator);
+                    value.push(*byte as char); 
+                } 
+                else {
+                    return Err(format!(
+                        "Unexpected token on line {}: '{}'",
+                        line_number, *byte as char
+                    ));
                 }
             }
             _ => return Err(format!("Internal parsing error.")),

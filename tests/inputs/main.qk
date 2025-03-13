@@ -1,6 +1,6 @@
 import quark::io
 
-fn main
+fn main()
 {
-
+    int i = 0;
 }
