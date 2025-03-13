@@ -1,0 +1,46 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Cargo launch",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--lib"
+                ]
+            },
+            "args": []
+        },
+        {
+            "name": "Debug launch",
+            "type": "lldb",
+            "request": "launch",
+            // "program": "${workspaceFolder}/target/debug/quark",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=quark",
+                    "--package=quark"
+                ],
+                "filter": {
+                    "name": "quark",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "-i",
+                "${workspaceFolder}/tests/inputs/basic.qk",
+                "-o",
+                "${workspaceFolder}/out",
+            ],
+            "cwd": "${workspaceFolder}",
+            "postDebugTask": "",
+            "postRunCommands": []
+        },
+    ]
+}
