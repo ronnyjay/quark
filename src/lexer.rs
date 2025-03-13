@@ -1,4 +1,5 @@
 use std::{
+
     collections::LinkedList,
     fmt::{self, format},
 };
@@ -22,6 +23,9 @@ pub enum Token {
     PlusPlus,
     MinusMinus,
 
+    LeftParenthesis,
+    RightParenthesis,
+
     LeftBracket,
     RightBracket,
 
@@ -29,6 +33,8 @@ pub enum Token {
     RightBrace,
     LeftCaret,
     RightCaret,
+
+    DoubleColon, // :: import statements, scope resolution?
 }
 
 pub struct Lexeme {
@@ -82,6 +88,8 @@ fn is_operator(c: u8) -> bool {
         b'{' | b'}'
             | b'['
             | b']'
+            | b'('
+            | b')'
             | b'+'
             | b'-'
             | b'*'
@@ -92,6 +100,7 @@ fn is_operator(c: u8) -> bool {
             | b'<'
             | b'>'
             | b'^'
+            | b':' 
     )
 }
 
@@ -109,12 +118,15 @@ fn string_to_operator(str: &String) -> Option<Token> {
         "*" => Some(Token::Asterisk),
         "/" => Some(Token::ForwardSlash),
         "=" => Some(Token::Equals),
+        "(" => Some(Token::LeftParenthesis),
+        ")" => Some(Token::RightParenthesis),
         "{" => Some(Token::LeftBracket),
         "}" => Some(Token::RightBracket),
         "[" => Some(Token::LeftBrace),
         "]" => Some(Token::RightBrace),
         "<" => Some(Token::LeftCaret),
         ">" => Some(Token::RightCaret),
+        "::" => Some(Token::DoubleColon),
         _ => None,
     }
 }
@@ -168,7 +180,20 @@ pub fn process(bytes: &Vec<u8>) -> Result<Vec<Lexeme>, String> {
                     if *byte == b'\n' {
                         line_number += 1;
                     }
-                } else {
+                } 
+                else if is_operator(*byte)
+                {
+                    // todo: move to function?
+                    states.pop_back();
+                    lexemes.push(Lexeme {
+                        line_number,
+                        token: Token::Identifier,
+                        value: Some(value.clone()),
+                    });
+                    value.clear();
+                    value.push(*byte as char);
+                }
+                else {
                     return Err(format!(
                         "Unexpected token on line {}: '{}'",
                         line_number, *byte as char
@@ -196,7 +221,21 @@ pub fn process(bytes: &Vec<u8>) -> Result<Vec<Lexeme>, String> {
                             line_number, value
                         ));
                     }
-                } else {
+                } 
+                else if is_start_of_identifier(*byte) {
+                    // todo: move to function?
+                    if let Some(op) = string_to_operator(&value) {
+                        states.pop_back();
+                        lexemes.push(Lexeme {
+                            line_number,
+                            token: op,
+                            value: Some(value.clone()),
+                        });
+                        value.clear();
+                        value.push(*byte as char);
+                    } 
+                }
+                else {
                     value.push(*byte as char);
                 }
             }
