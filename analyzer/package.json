@@ -1,0 +1,25 @@
+{
+  "name": "quark-analyzer",
+  "displayName": "quark-analyzer",
+  "description": "basic syntax highlighting for the quark programming language",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "quark",
+      "aliases": ["Quark", "quark"],
+      "extensions": [".qk"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "quark",
+      "scopeName": "source.quark",
+      "path": "./syntaxes/quark.tmLanguage.json"
+    }]
+  }
+}

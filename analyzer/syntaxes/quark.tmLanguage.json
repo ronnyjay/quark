@@ -1,0 +1,94 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Quark",
+	"patterns": [
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#numbers"
+		},
+		{
+            "include": "#namespaces"
+        },
+		{
+			"include": "#function-names"
+		}
+	],
+	"repository": {
+		"keywords": {
+			"patterns": [{
+				"name": "keyword.control.quark",
+				"match": "\\b(if|while|for|return|import|const|fn)\\b"
+			}]
+		},
+		"strings": {
+			"name": "string.quoted.double.quark",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.quark",
+					"match": "\\\\."
+				}
+			]
+		},
+		"numbers": {
+			"patterns": [
+				{
+					"name": "constant.numeric.integer.quark",
+					"match": "\\b\\d+\\b"
+				},
+				{
+					"name": "constant.numeric.float.quark",
+					"match": "\\b\\d+\\.\\d+([eE][-+]?\\d+)?\\b"
+				},
+				{
+					"name": "constant.numeric.hex.quark",
+					"match": "\\b0x[0-9A-Fa-f]+\\b"
+				},
+				{
+					"name": "constant.numeric.binary.quark",
+					"match": "\\b0b[01]+\\b"
+				}
+			]
+		},
+		"function-names": {
+			"patterns": [
+				{
+					"name": "entity.name.function.quark",
+					"match": "(?<=\\bfn\\s+)([a-zA-Z_][\\w]*)"
+				}
+			]
+		},
+		"namespaces": {
+            "patterns": [
+                {
+                    "name": "entity.name.namespace.quark",
+                    "begin": "\\b([a-zA-Z_][\\w]*)\\b(?=::)",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "entity.name.namespace.quark"
+                        }
+                    },
+                    "end": "(?<=::)([a-zA-Z_][\\w]*)",
+                    "endCaptures": {
+                        "0": {
+                            "name": "entity.name.function.quark"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "name": "keyword.operator.namespace.quark",
+                            "match": "::"
+                        }
+                    ]
+                }
+            ]
+        }
+	},
+	"scopeName": "source.quark"
+}
