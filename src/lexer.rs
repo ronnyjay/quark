@@ -1,11 +1,7 @@
 use std::{
-
-
-    collections::LinkedList,
+    collections::{LinkedList, VecDeque},
     fmt::{self, format},
 };
-
-
 
 #[derive(Debug)]
 pub enum Token {
@@ -16,6 +12,13 @@ pub enum Token {
     Minus,
     Equals,
     Asterisk,
+    AsteriskAsterisk,
+    Percent,
+    Ampersand,
+    AmpersandAmpersand,
+    Pipe,
+    PipePipe,
+
     ForwardSlash,
 
     PlusEquals,
@@ -23,6 +26,7 @@ pub enum Token {
     EqualsEquals,
     AsteriskEquals,
     ForwardSlashEquals,
+    ForwardSlashForwardSlash,
 
     PlusPlus,
     MinusMinus,
@@ -35,12 +39,23 @@ pub enum Token {
 
     LeftBrace,
     RightBrace,
+
     LeftCaret,
     RightCaret,
 
-    Semicolon, 
+    LeftCaretLeftCaret,
+    RightCaretRightCaret,
+
+    LeftCaretEquals,
+    RightCaretEquals,
+
+    Semicolon,
 
     ColonColon, // :: import statements, scope resolution?
+
+    IntegerLiteral,
+    FloatLiteral,
+    CharLiteral,
 }
 
 pub struct Lexeme {
@@ -59,11 +74,15 @@ impl fmt::Debug for Lexeme {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 enum LexerState {
     Overall,
     Identifier,
-    Number,
+
+    WholeNumber,   // -100000
+    Decimal,       // .6002
+    Exponentional, // e+7, E-09
+
     Literal,
     Operator,
 }
@@ -107,7 +126,7 @@ fn is_operator(c: u8) -> bool {
             | b'<'
             | b'>'
             | b'^'
-            | b':' 
+            | b':'
             | b';'
     )
 }
@@ -124,6 +143,12 @@ fn string_to_operator(str: &String) -> Option<Token> {
         "++" => Some(Token::PlusPlus),
         "--" => Some(Token::MinusMinus),
         "*" => Some(Token::Asterisk),
+        "**" => Some(Token::AsteriskAsterisk),
+        "&" => Some(Token::Ampersand),
+        "&&" => Some(Token::AmpersandAmpersand),
+        "|" => Some(Token::Pipe),
+        "||" => Some(Token::PipePipe),
+        "%" => Some(Token::Percent),
         "/" => Some(Token::ForwardSlash),
         "=" => Some(Token::Equals),
         "(" => Some(Token::LeftParenthesis),
@@ -140,179 +165,204 @@ fn string_to_operator(str: &String) -> Option<Token> {
     }
 }
 
-pub fn process(bytes: &Vec<u8>) -> Result<Vec<Lexeme>, String> {
+pub fn process(bytes: &mut VecDeque<u8>) -> Result<Vec<Lexeme>, String> {
     let mut lexemes: Vec<Lexeme> = Vec::new();
-    let mut states: LinkedList<LexerState> = LinkedList::new();
-    states.push_back(LexerState::Overall);
+    let mut state: LexerState = LexerState::Overall;
 
     let mut line_number: usize = 1;
     let mut value = String::new();
 
-    for byte in bytes {
-        let state = match states.back() {
-            Some(state) => state,
-            None => return Err(format!("Internal parsing error.")),
+    while !bytes.is_empty() {
+        let byte = match bytes.front() {
+            Some(byte) => byte,
+            None => return Err(format!("We shouldn't really get here?")),
         };
 
         match state {
             LexerState::Overall => {
                 if *byte == b'\n' {
                     line_number += 1;
+                    bytes.pop_front();
                 } else if is_whitespace(*byte) {
+                    bytes.pop_front();
                 } else if is_start_of_identifier(*byte) {
-                    states.push_back(LexerState::Identifier);
-                    value.push(*byte as char);
-                } else if is_operator(*byte) {
-                    states.push_back(LexerState::Operator);
-                    value.push(*byte as char);
-                } else if is_number(*byte) {
-                    states.push_back(LexerState::Number);
-                    value.push(*byte as char);
-                }                
-                else if *byte == b'\0' {
+                    state = LexerState::Identifier;
+                } else if *byte == b'\0' {
                     break;
                 } else {
-                    return Err(format!(
-                        "Unexpected token on line {}: '{}'",
-                        line_number, *byte as char
-                    ));
+                    let current = *byte;
+                    bytes.pop_front();
+
+                    if let Some(lookahead) = bytes.front() {
+                        if lookahead.is_ascii_digit() {
+                            bytes.push_front(current);
+                            state = LexerState::WholeNumber;
+                        } else {
+                            bytes.push_front(current);
+                            state = LexerState::Operator;
+                        }
+                    } else {
+                        bytes.push_front(current);
+                        state = LexerState::Operator;
+                    }
                 }
             }
             LexerState::Identifier => {
                 if is_valid_in_identifier(*byte) {
                     value.push(*byte as char);
-                } else if is_whitespace(*byte) || *byte == b'\n' || *byte == b'\0' {
-                    states.pop_back();
+                    bytes.pop_front();
+                } else {
+                    state = LexerState::Overall;
                     lexemes.push(Lexeme {
                         line_number,
                         token: Token::Identifier,
                         value: Some(value.clone()),
                     });
                     value.clear();
-
-                    if *byte == b'\n' {
-                        line_number += 1;
-                    }
-                } 
-                else if is_operator(*byte)
-                {
-                    // todo: move to function?
-                    states.pop_back();
-                    lexemes.push(Lexeme {
-                        line_number,
-                        token: Token::Identifier,
-                        value: Some(value.clone()),
-                    });
-                    value.clear();
-                    states.push_back(LexerState::Operator);
-                    value.push(*byte as char);
-                } 
-                else {
-                    return Err(format!(
-                        "Unexpected token on line {}: '{}'",
-                        line_number, *byte as char
-                    ));
                 }
             }
             LexerState::Operator => {
-                if is_whitespace(*byte) || *byte == b'\n' || *byte == b'\0' {
-                    if let Some(op) = string_to_operator(&value) {
-                        states.pop_back();
-                        lexemes.push(Lexeme {
-                            line_number,
-                            token: op,
-                            value: Some(value.clone()),
-                        });
-                        value.clear();
+                let mut token = None;
+                let current = match bytes.pop_front() {
+                    Some(current) => current,
+                    None => return Err(format!("Got an empty operator? Line {}", line_number)),
+                };
 
-                        if *byte == b'\n' {
-                            line_number += 1;
-                        }
-                    } else {
-                        return Err(format!(
-                            "Unexpected token on line {}: \n\
-                            Unrecognized operator: {}",
-                            line_number, value
-                        ));
-                    }
-                } 
-                else if is_operator(*byte) {
-                    let mut temp = value.clone();
-                    temp.push(*byte as char);
+                value.push(current as char);
+                let single_op = string_to_operator(&value);
 
-                    if string_to_operator(&temp).is_some() {
-                        value.push(*byte as char);
-                    } else {
-                        if let Some(op) = string_to_operator(&value) {
-                            states.pop_back();
-                            lexemes.push(Lexeme {
-                                line_number,
-                                token: op,
-                                value: Some(value.clone()),
-                            });
-                            value.clear();
+                match bytes.front() {
+                    Some(next) => {
+                        value.push(*next as char);
+                        let double_op = string_to_operator(&value);
+                        if let Some(_) = double_op {
+                            token = double_op;
+                            bytes.pop_front();
+                        } else {
+                            token = single_op;
+                            value.pop();
                         }
-                        states.push_back(LexerState::Operator);
-                        value.push(*byte as char); 
                     }
-                }
-                else if is_start_of_identifier(*byte) {
-                    // todo: move to function?
-                    if let Some(op) = string_to_operator(&value) {
-                        states.pop_back();
-                        lexemes.push(Lexeme {
-                            line_number,
-                            token: op,
-                            value: Some(value.clone()),
-                        });
-                        value.clear();
-                        value.push(*byte as char);
-                    } 
-                }
-                else {
-                    value.push(*byte as char);
-                }
-            }
-            LexerState::Number => {
-                if is_whitespace(*byte) || *byte == b'\n' || *byte == b'\0' {
-                    states.pop_back();
+                    None => token = single_op,
+                };
+
+                if let Some(token) = token {
                     lexemes.push(Lexeme {
                         line_number,
-                        token: Token::Number,
+                        token,
                         value: Some(value.clone()),
                     });
                     value.clear();
-
-                    if *byte == b'\n' {
-                        line_number += 1;
-                    } 
-                }
-                else if is_operator(*byte) {
-                    states.pop_back();
-                    lexemes.push(Lexeme {
-                        line_number,
-                        token: Token::Number,
-                        value: Some(value.clone()),
-                    });
-                    value.clear(); 
-                    states.push_back(LexerState::Operator);
-                    value.push(*byte as char); 
-                } 
-                else {
-                    return Err(format!(
-                        "Unexpected token on line {}: '{}'",
-                        line_number, *byte as char
-                    ));
+                    state = LexerState::Overall;
                 }
             }
+            LexerState::WholeNumber => {
+                match *byte {
+                    b'-' | b'+' => {
+                        if value.is_empty() {
+                            value.push(*byte as char);
+                            bytes.pop_front();
+                        } else {
+                            return Err(format!(
+                                "Unexpected token on line {}: {}",
+                                line_number, byte
+                            ));
+                        }
+                    }
+                    b'0'..b'9' => {
+                        value.push(*byte as char);
+                        bytes.pop_front();
+                    }
+                    b'.' => {
+                        value.push(*byte as char);
+                        bytes.pop_front();
+                        state = LexerState::Decimal;
+                    }
+                    b'e' | b'E' => {
+                        value.push(*byte as char);
+                        bytes.pop_front();
+
+                        // only one + or - can occur after e/E
+                        // check for +/- here to simplify logic
+
+                        match bytes.front() {
+                            Some(c) => {
+                                if *c == b'-' || *c == b'+' {
+                                    value.push(*c as char);
+                                    bytes.pop_front();
+                                }
+                            }
+                            _ => {}
+                        }
+
+                        state = LexerState::Exponentional;
+                    }
+                    _ => {
+                        state = LexerState::Overall;
+                        lexemes.push(Lexeme {
+                            line_number,
+                            token: Token::IntegerLiteral,
+                            value: Some(value.clone()),
+                        });
+                        value.clear();
+                    }
+                }
+            }
+            LexerState::Decimal => match *byte {
+                b'0'..b'9' => {
+                    value.push(*byte as char);
+                    bytes.pop_front();
+                }
+                b'e' | b'E' => {
+                    value.push(*byte as char);
+                    bytes.pop_front();
+
+                    // only one + or - can occur after e/E
+                    // check for +/- here to simplify logic
+
+                    match bytes.front() {
+                        Some(c) => {
+                            if *c == b'-' || *c == b'+' {
+                                value.push(*c as char);
+                                bytes.pop_front();
+                            }
+                        }
+                        _ => {}
+                    }
+
+                    state = LexerState::Exponentional;
+                }
+                _ => {
+                    state = LexerState::Overall;
+                    lexemes.push(Lexeme {
+                        line_number,
+                        token: Token::FloatLiteral,
+                        value: Some(value.clone()),
+                    });
+                    value.clear();
+                }
+            },
+            LexerState::Exponentional => match *byte {
+                b'0'..=b'9' => {
+                    value.push(*byte as char);
+                    bytes.pop_front();
+                }
+                _ => {
+                    state = LexerState::Overall;
+                    lexemes.push(Lexeme {
+                        line_number,
+                        token: Token::FloatLiteral,
+                        value: Some(value.clone()),
+                    });
+                    value.clear();
+                }
+            },
             _ => return Err(format!("Internal parsing error.")),
         };
     }
 
-    if let Some(state) = states.pop_back() {
-        if state != LexerState::Overall {
-            return Err(format!("Expected lexer state to be empty"));
-        }
+    if state != LexerState::Overall {
+        return Err(format!("Expected lexer state to be empty: {:?}", state));
     }
 
     Ok(lexemes)

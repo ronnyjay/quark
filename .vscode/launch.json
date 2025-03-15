@@ -5,18 +5,6 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Cargo launch",
-            "cargo": {
-                "args": [
-                    "build",
-                    "--lib"
-                ]
-            },
-            "args": []
-        },
-        {
             "name": "Debug launch",
             "type": "lldb",
             "request": "launch",
@@ -34,7 +22,7 @@
             },
             "args": [
                 "-i",
-                "${workspaceFolder}/tests/inputs/basic.qk",
+                "${workspaceFolder}/tests/lexer/inputs/main.qk",
                 "-o",
                 "${workspaceFolder}/out",
             ],

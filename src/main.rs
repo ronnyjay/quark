@@ -1,7 +1,7 @@
 mod lexer;
 mod parser;
 
-use std::{fs::File, io::{BufReader, Read}, process::exit};
+use std::{collections::VecDeque, fs::File, io::{BufReader, Read}, process::exit};
 
 use clap::Parser;
 use log::{info, Level, LevelFilter, SetLoggerError};
@@ -42,9 +42,10 @@ fn main() {
         }
     };
 
-    file_content.push(b'\0');
+    let mut file_content = VecDeque::from(file_content);
+    file_content.push_back(b'\0');
 
-    let lexemes = match lexer::process(&file_content) {
+    let lexemes = match lexer::process(&mut file_content) {
         Ok(lexemes) => lexemes,
         Err(err) => {
             println!("Failed to parse file.\n{}", err);
