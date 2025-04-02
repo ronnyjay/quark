@@ -3,6 +3,19 @@ pub trait ExprAST {
 }
 
 /**
+ * Expression class for a float literals
+ */
+pub struct NumberExprAST {
+    pub val: f64,
+}
+
+impl ExprAST for NumberExprAST {
+    fn print(&self) {
+        println!("NumberExprAST: {}", self.val);
+    }
+}
+
+/**
  * Expression class for referencing a variable
  */
 pub struct VariableExprAST {
@@ -66,7 +79,6 @@ impl ExprAST for PrototypeAST {
         }
     }
 }
-
 
 /**
  * Represents a function definition
