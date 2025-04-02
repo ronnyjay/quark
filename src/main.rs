@@ -64,6 +64,7 @@ fn main() {
     let mut parser = CanonicalParser::new(lexemes);
     parser.process();
 
+    println!("\n--Expressions--\n");
     for expr in &parser.expressions {
         expr.print();
     }

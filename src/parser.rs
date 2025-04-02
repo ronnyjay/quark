@@ -1,4 +1,6 @@
-use crate::{ast::{ExprAST, FloatLiteralExprAST, IntegerLiteralExprAST }, lexer::{Lexeme, Token}};
+use clap::{Error, ValueEnum};
+
+use crate::{ast::{ExprAST, FloatLiteralExprAST, IntegerLiteralExprAST, VariableExprAST }, lexer::{Lexeme, Token}};
 
 #[allow(dead_code)]
 pub struct CanonicalParser {
@@ -42,6 +44,83 @@ impl CanonicalParser {
     }
 
     #[allow(dead_code)]
+    fn parse_identifier_expr(&mut self) -> Option<Box<dyn ExprAST>> {
+        // I think im just going to start unwrapping...
+        let id_name = {
+            if let Some(token) = self.curtok() {
+                if let Some(value) = &token.value {
+                    value.clone()
+                }
+                else {
+                    return None;
+                }
+            }
+            else {
+                return None;
+            }
+        };
+
+        self.nexttok(); // eat identifier 
+
+        // Yeah, will definitely be unwrapping...
+        let is_variable_ref: bool = {
+            if let Some(token) = self.curtok() {
+                if let Some(value) = &token.value {
+                    if value != "(" {
+                        true
+                    }
+                    else {
+                        false
+                    }
+                } 
+                else {
+                    false
+                }
+            }
+            else {
+                false
+            }
+        };
+
+        if is_variable_ref {
+            return Some(Box::new(VariableExprAST { name: id_name }));
+        }
+
+        self.nexttok(); // eat (
+
+        let mut _args: Vec<Box<dyn ExprAST>> = Vec::new();
+
+        if let Some(token) = self.curtok() {
+            if let Some(value) = &token.value {
+                if value != ")" {
+                    loop {
+                        // todo: parse arguments
+                        // will need to refactor this to allow for consuming nexttok
+
+                        if self.curtok()?.value.as_ref()?.clone() == ")" {
+                            break;
+                        }
+
+                        if self.curtok()?.value.as_ref()?.clone() != ","
+                        {
+                            println!("Expected ')' or ',' in argument list");
+                            break;
+                        }
+                    }
+                }
+                else {
+              
+                }
+            }
+        }
+        else {
+            println!("Expected ')' or ',' in argument list");
+        }
+
+        return None;
+    }
+
+    #[allow(dead_code)]
     fn parse_literal_expr(&mut self) -> Option<Box<dyn ExprAST>> {
         if let Some(tok) = self.curtok() {
             match tok.token {
@@ -75,6 +154,9 @@ impl CanonicalParser {
                   Token::IntegerLiteral | Token::FloatLiteral => {
                     self.parse_literal_expr()
                   },
+                  Token::Identifier => {
+                    self.parse_identifier_expr()
+                  }
                   _ => None
                 }
             }
