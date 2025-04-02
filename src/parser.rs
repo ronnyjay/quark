@@ -1,6 +1,6 @@
 use clap::{Error, ValueEnum};
 
-use crate::{ast::{ExprAST, FloatLiteralExprAST, IntegerLiteralExprAST, VariableExprAST }, lexer::{Lexeme, Token}};
+use crate::{ast::{CallExprAST, ExprAST, FloatLiteralExprAST, IntegerLiteralExprAST, VariableExprAST }, lexer::{Lexeme, Token}};
 
 #[allow(dead_code)]
 pub struct CanonicalParser {
@@ -43,46 +43,16 @@ impl CanonicalParser {
         self.pos += 1;
     }
 
-    #[allow(dead_code)]
+    // Still not a fan of all the unwrapping and cloning
+    // Will hopefully find a better way to handle this...
     fn parse_identifier_expr(&mut self) -> Option<Box<dyn ExprAST>> {
-        // I think im just going to start unwrapping...
-        let id_name = {
-            if let Some(token) = self.curtok() {
-                if let Some(value) = &token.value {
-                    value.clone()
-                }
-                else {
-                    return None;
-                }
-            }
-            else {
-                return None;
-            }
-        };
+        let id_name = self.curtok().unwrap().value.clone().unwrap();
 
         self.nexttok(); // eat identifier 
 
-        // Yeah, will definitely be unwrapping...
-        let is_variable_ref: bool = {
-            if let Some(token) = self.curtok() {
-                if let Some(value) = &token.value {
-                    if value != "(" {
-                        true
-                    }
-                    else {
-                        false
-                    }
-                } 
-                else {
-                    false
-                }
-            }
-            else {
-                false
-            }
-        };
-
-        if is_variable_ref {
+        // todo: will panic if eof, fix.
+        let tok1 = self.curtok().unwrap().value.clone().unwrap();
+        if tok1 != "(" {
             return Some(Box::new(VariableExprAST { name: id_name }));
         }
 
@@ -90,34 +60,30 @@ impl CanonicalParser {
 
         let mut _args: Vec<Box<dyn ExprAST>> = Vec::new();
 
-        if let Some(token) = self.curtok() {
-            if let Some(value) = &token.value {
-                if value != ")" {
-                    loop {
-                        // todo: parse arguments
-                        // will need to refactor this to allow for consuming nexttok
-
-                        if self.curtok()?.value.as_ref()?.clone() == ")" {
-                            break;
-                        }
-
-                        if self.curtok()?.value.as_ref()?.clone() != ","
-                        {
-                            println!("Expected ')' or ',' in argument list");
-                            break;
-                        }
-                    }
+        // todo: will panic if eof, fix.
+        let tok2 = self.curtok().unwrap().value.clone().unwrap();
+        if tok2 != ")" {
+            loop {
+                if let Some(arg) = self.parse_primary() {
+                    _args.push(arg);
                 }
-                else {
-              
+
+                if self.curtok().unwrap().value.clone().unwrap() == ")" {
+                    break;
                 }
+
+                if self.curtok().unwrap().value.clone().unwrap() != "," {
+                    println!("Expected ')' or ',' in argument list");
+                    break;
+                }
+
+                self.nexttok();
             }
         }
-        else {
-            println!("Expected ')' or ',' in argument list");
-        }
 
-        return None;
+        self.nexttok(); // eat )
+
+        return Some(Box::new(CallExprAST { function: id_name, args: _args }));
     }
 
     #[allow(dead_code)]
