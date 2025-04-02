@@ -1,5 +1,6 @@
 mod lexer;
 mod parser;
+mod ast;
 
 use crate::parser::CanonicalParser;
 
@@ -60,5 +61,5 @@ fn main() {
         println!("{:?}", lexeme)
     }
 
-    let mut _parser = CanonicalParser::default();
+    let mut _parser = CanonicalParser::new(lexemes);
 }
