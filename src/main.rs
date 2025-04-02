@@ -61,5 +61,10 @@ fn main() {
         println!("{:?}", lexeme)
     }
 
-    let mut _parser = CanonicalParser::new(lexemes);
+    let mut parser = CanonicalParser::new(lexemes);
+    parser.process();
+
+    for expr in &parser.expressions {
+        expr.print();
+    }
 }

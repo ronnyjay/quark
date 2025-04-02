@@ -1,4 +1,4 @@
-use crate::{ast::ExprAST, lexer::{Lexeme, Token}};
+use crate::{ast::{ExprAST, FloatLiteralExprAST, IntegerLiteralExprAST }, lexer::{Lexeme, Token}};
 
 #[allow(dead_code)]
 pub struct CanonicalParser {
@@ -8,11 +8,26 @@ pub struct CanonicalParser {
 }
 
 impl CanonicalParser {
+    // todo: lexemes could probably just be passed to process instead of being a member.
+    // similarly, process could return expressions instead of them being stored here
+    // - want to make this like the lexer where it's mostly 'static'
     pub fn new(lexemes: Vec<Lexeme>) -> Self {
         CanonicalParser { 
             expressions: Vec::new(), 
             lexemes, 
             pos: 0
+        }
+    }
+
+    // This implementation is purely for testing at the moment
+    // If we are unable to process a token, simply skip to the next
+    pub fn process(&mut self) {
+        while self.pos < self.lexemes.len() {
+            if let Some(expr) = self.parse_primary() {
+                self.expressions.push(expr);
+            } else {
+                self.nexttok();
+            }
         }
     }
 
@@ -27,48 +42,40 @@ impl CanonicalParser {
     }
 
     #[allow(dead_code)]
-    fn parse_primary(&self) -> Option<Box<dyn ExprAST>> {
+    fn parse_literal_expr(&mut self) -> Option<Box<dyn ExprAST>> {
+        if let Some(tok) = self.curtok() {
+            match tok.token {
+                Token::IntegerLiteral => {
+                    if let Some(val) = &tok.value {
+                        if let Ok(num) = val.parse::<i32>() {
+                            self.nexttok();
+                            return Some(Box::new(IntegerLiteralExprAST { value: num }));
+                        }
+                    }
+                }
+                Token::FloatLiteral => {
+                    if let Some(val) = &tok.value {
+                        if let Ok(num) = val.parse::<f32>() {
+                            self.nexttok();
+                            return Some(Box::new(FloatLiteralExprAST { value: num }));
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+
+    #[allow(dead_code)]
+    fn parse_primary(&mut self) -> Option<Box<dyn ExprAST>> {
         match &self.curtok() {
             Some(lex) => {
                 match lex.token {
-                    Token::Identifier => todo!(),
-                    Token::Number => todo!(),
-                    Token::Plus => todo!(),
-                    Token::Minus => todo!(),
-                    Token::Equals => todo!(),
-                    Token::Asterisk => todo!(),
-                    Token::AsteriskAsterisk => todo!(),
-                    Token::Percent => todo!(),
-                    Token::Ampersand => todo!(),
-                    Token::AmpersandAmpersand => todo!(),
-                    Token::Pipe => todo!(),
-                    Token::PipePipe => todo!(),
-                    Token::ForwardSlash => todo!(),
-                    Token::PlusEquals => todo!(),
-                    Token::MinusEquals => todo!(),
-                    Token::EqualsEquals => todo!(),
-                    Token::AsteriskEquals => todo!(),
-                    Token::ForwardSlashEquals => todo!(),
-                    Token::ForwardSlashForwardSlash => todo!(),
-                    Token::PlusPlus => todo!(),
-                    Token::MinusMinus => todo!(),
-                    Token::LeftParenthesis => todo!(),
-                    Token::RightParenthesis => todo!(),
-                    Token::LeftBracket => todo!(),
-                    Token::RightBracket => todo!(),
-                    Token::LeftBrace => todo!(),
-                    Token::RightBrace => todo!(),
-                    Token::LeftCaret => todo!(),
-                    Token::RightCaret => todo!(),
-                    Token::LeftCaretLeftCaret => todo!(),
-                    Token::RightCaretRightCaret => todo!(),
-                    Token::LeftCaretEquals => todo!(),
-                    Token::RightCaretEquals => todo!(),
-                    Token::Semicolon => todo!(),
-                    Token::ColonColon => todo!(),
-                    Token::IntegerLiteral => todo!(),
-                    Token::FloatLiteral => todo!(),
-                    Token::CharLiteral => todo!(),
+                  Token::IntegerLiteral | Token::FloatLiteral => {
+                    self.parse_literal_expr()
+                  },
+                  _ => None
                 }
             }
             None => None

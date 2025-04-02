@@ -3,7 +3,7 @@ use std::{
     fmt::{self, format},
 };
 
-#[derive(Debug)]
+#[derive(PartialEq, Debug)]
 pub enum Token {
     Identifier,
     Number,

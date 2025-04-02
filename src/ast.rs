@@ -3,15 +3,28 @@ pub trait ExprAST {
 }
 
 /**
- * Expression class for a float literals
+ * Expression class for integer literals
  */
-pub struct NumberExprAST {
-    pub val: f64,
+pub struct IntegerLiteralExprAST {
+    pub value: i32,
 }
 
-impl ExprAST for NumberExprAST {
+impl ExprAST for IntegerLiteralExprAST {
     fn print(&self) {
-        println!("NumberExprAST: {}", self.val);
+        println!("IntegerLiteralExprAST: {}", self.value);
+    }
+}
+
+/**
+ * Expression class for a float literals
+ */
+pub struct FloatLiteralExprAST {
+    pub value: f32,
+}
+
+impl ExprAST for FloatLiteralExprAST {
+    fn print(&self) {
+        println!("FloatLiteralExprAST: {}", self.value);
     }
 }
 
