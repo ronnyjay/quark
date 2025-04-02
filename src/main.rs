@@ -1,6 +1,9 @@
 mod lexer;
 mod parser;
 
+use crate::parser::CanonicalParser;
+
+
 use std::{collections::VecDeque, fs::File, io::{BufReader, Read}, process::exit};
 
 use clap::Parser;
@@ -56,4 +59,6 @@ fn main() {
     for lexeme in &lexemes {
         println!("{:?}", lexeme)
     }
+
+    let mut _parser = CanonicalParser::default();
 }
