@@ -1,5 +1,3 @@
-use clap::{Error, ValueEnum};
-
 use crate::{ast::{CallExprAST, ExprAST, FloatLiteralExprAST, IntegerLiteralExprAST, VariableExprAST }, lexer::{Lexeme, Token}};
 
 #[allow(dead_code)]
@@ -60,8 +58,14 @@ impl CanonicalParser {
 
         let mut _args: Vec<Box<dyn ExprAST>> = Vec::new();
 
-        // todo: will panic if eof, fix.
-        let tok2 = self.curtok().unwrap().value.clone().unwrap();
+        let tok2 = match self.curtok().and_then(|t| t.value.as_deref()) {
+            Some(val) => val,
+            None => {
+                println!("\x1b[1;31merror:\x1b[0m Unexpected end of input in argument list");
+                return None;
+            }
+        };
+
         if tok2 != ")" {
             loop {
                 if let Some(arg) = self.parse_primary() {

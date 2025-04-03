@@ -50,8 +50,9 @@ pub enum Token {
     RightCaretEquals,
 
     Semicolon,
+    ColonColon,
 
-    ColonColon, // :: import statements, scope resolution?
+    Comma,
 
     IntegerLiteral,
     FloatLiteral,
@@ -128,6 +129,7 @@ fn is_operator(c: u8) -> bool {
             | b'^'
             | b':'
             | b';'
+            | b','
     )
 }
 
@@ -159,6 +161,7 @@ fn string_to_operator(str: &String) -> Option<Token> {
         "]" => Some(Token::RightBrace),
         "<" => Some(Token::LeftCaret),
         ">" => Some(Token::RightCaret),
+        "," => Some(Token::Comma),
         ";" => Some(Token::Semicolon),
         "::" => Some(Token::ColonColon),
         _ => None,
@@ -190,21 +193,12 @@ pub fn process(bytes: &mut VecDeque<u8>) -> Result<Vec<Lexeme>, String> {
                 } else if *byte == b'\0' {
                     break;
                 } else {
-                    let current = *byte;
-                    bytes.pop_front();
-
-                    if let Some(lookahead) = bytes.front() {
-                        if lookahead.is_ascii_digit() {
-                            bytes.push_front(current);
-                            state = LexerState::WholeNumber;
-                        } else {
-                            bytes.push_front(current);
-                            state = LexerState::Operator;
-                        }
-                    } else {
-                        bytes.push_front(current);
+                   if byte.is_ascii_digit() {
+                        state = LexerState::WholeNumber;
+                   } 
+                   else {
                         state = LexerState::Operator;
-                    }
+                   }
                 }
             }
             LexerState::Identifier => {

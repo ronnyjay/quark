@@ -2,5 +2,5 @@ import quark::io
 
 fn main()
 {
-    int i = 10.007e19;
+    int i = 1;
 }
