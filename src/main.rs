@@ -1,8 +1,10 @@
 mod lexer;
 mod parser;
 mod ast;
+mod parser_generator;
 
 use crate::parser::CanonicalParser;
+use crate::parser_generator::ParserGenerator;
 
 
 use std::{collections::VecDeque, fs::File, io::{BufReader, Read}, process::exit};
@@ -61,11 +63,13 @@ fn main() {
         println!("{:?}", lexeme)
     }
 
-    let mut parser = CanonicalParser::new(lexemes);
-    parser.process();
+    ParserGenerator::new(lexemes).process();
 
-    println!("\n--Expressions--\n");
-    for expr in &parser.expressions {
-        expr.print();
-    }
+    // let mut parser = CanonicalParser::new(lexemes);
+    // parser.process();
+
+    // println!("\n--Expressions--\n");
+    // for expr in &parser.expressions {
+    //     expr.print();
+    // }
 }

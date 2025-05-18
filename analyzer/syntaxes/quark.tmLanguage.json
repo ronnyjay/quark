@@ -16,6 +16,9 @@
         },
 		{
 			"include": "#function-names"
+		},
+		{
+			"include": "#types"
 		}
 	],
 	"repository": {
@@ -88,7 +91,15 @@
                     ]
                 }
             ]
-        }
+        },
+		"types": {
+			"patterns": [
+				{
+					"name": "storage.type.numeric.quark",
+					"match": "\\b(i8|i16|i32|i64|f32|f64)\\b"
+				}
+			]
+		}
 	},
 	"scopeName": "source.quark"
 }

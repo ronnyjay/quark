@@ -8,6 +8,8 @@ pub enum Token {
     Identifier,
     Number,
 
+    Keyword(String),
+
     Plus,
     Minus,
     Equals,
@@ -133,6 +135,15 @@ fn is_operator(c: u8) -> bool {
     )
 }
 
+fn is_keyword(str: &String) -> bool {
+    matches!(
+        str.as_str(),
+        "fn"
+        | "i64" | "i32" | "i16" | "i8"
+        | "u64" | "u32" | "u16" | "u8"
+    )
+}
+
 fn string_to_operator(str: &String) -> Option<Token> {
     match str.as_str() {
         "+=" => Some(Token::PlusEquals),
@@ -207,9 +218,17 @@ pub fn process(bytes: &mut VecDeque<u8>) -> Result<Vec<Lexeme>, String> {
                     bytes.pop_front();
                 } else {
                     state = LexerState::Overall;
+
+                    let token = if is_keyword(&value) {
+                        Token::Keyword(value.clone())
+                    }
+                    else {
+                        Token::Identifier
+                    };
+
                     lexemes.push(Lexeme {
                         line_number,
-                        token: Token::Identifier,
+                        token: token,
                         value: Some(value.clone()),
                     });
                     value.clear();

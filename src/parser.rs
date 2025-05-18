@@ -41,6 +41,20 @@ impl CanonicalParser {
         self.pos += 1;
     }
 
+    #[allow(dead_code)]
+    fn parse_prototype(&mut self) -> Option<Box<dyn ExprAST>> {
+        if self.curtok().unwrap().token != Token::Identifier {
+            println!("Expected function name in prototype");
+        }
+
+        todo!()
+    }
+
+    #[allow(dead_code)]
+    fn parse_definition(&mut self) -> Option<Box<dyn ExprAST>> {
+        todo!()
+    }
+
     // Still not a fan of all the unwrapping and cloning
     // Will hopefully find a better way to handle this...
     fn parse_identifier_expr(&mut self) -> Option<Box<dyn ExprAST>> {
